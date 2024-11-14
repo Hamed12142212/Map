@@ -7,7 +7,7 @@ from flask_sqlalchemy import SQLAlchemy
 app = Flask(__name__)
 
 # Enable CORS for the frontend and allow credentials (cookies)
-CORS(app, origins="http://127.0.0.1:5500", supports_credentials=True)
+CORS(app, origins="https://map-6aha.onrender.com", supports_credentials=True)
 
 # Configurations
 app.config["JWT_SECRET_KEY"] = "your_jwt_secret_key"  # Secret key for JWT
