@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ramallah Waste Containers</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.6.0/dist/leaflet.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Turf.js/6.5.0/turf.min.js"></script>
+    <style>
+        /* Full page styling */
+        body {
+            margin: 0;
+            height: 100%;
+            width: 100%;
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(to right, #74230e, #FEB47B); /* Gradient background */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* Login page container */
+        .login-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        /* Login box styles */
+        .login-box {
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0px 4px 15px rgba(0, 0, 0, 0.1);
+            background-color: rgba(255, 255, 255, 0.9); /* Semi-transparent white */
+            width: 350px;
+            text-align: center;
+        }
+
+        /* Header (title) */
+        .login-box h2 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        /* Input field styling */
+        .login-box input {
+            width: 100%;
+            padding: 12px;
+            margin: 10px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+            color: #333;
+            background-color: #f9f9f9;
+        }
+
+        .login-box input:focus {
+            border-color: #FF7E5F; /* Focus color */
+            outline: none;
+        }
+
+        /* Button styling */
+        .login-box button {
+            width: 100%;
+            padding: 12px;
+            background-color: #FF7E5F; /* Primary button color */
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+        }
+
+        .login-box button:hover {
+            background-color: #FEB47B; /* Button hover color */
+        }
+
+        .login-box button:active {
+            background-color: #FF7E5F; /* Active state button color */
+            transform: scale(0.98); /* Slight button shrink on click */
+        }
+    </style>
+</head>
+<body>
+
+<!-- Login page (initially visible) -->
+<div class="login-container">
+    <div class="login-box">
+        <h2>Login</h2>
+        <input type="text" id="username" placeholder="Username" />
+        <input type="password" id="password" placeholder="Password" />
+        <button onclick="login()">Login</button>
+    </div>
+</div>
+
+<script>
+    // Handle login process
+    function login() {
+        const username = $('#username').val();
+        const password = $('#password').val();
+
+        // Perform AJAX login request
+        $.ajax({
+            url: "http://127.0.0.1:5000/",  // Backend URL
+            method: "POST",  // POST request
+            contentType: "application/json",  // Sending JSON data
+            data: JSON.stringify({
+                username: username,  // Get the username from the form
+                password: password   // Get the password from the form
+            }),
+            success: function(response) {
+                console.log("Login successful, redirecting to map...");
+                
+
+                // Save the JWT token to sessionStorage
+                sessionStorage.setItem('access_token_cookie', response.access_token);
+
+                // Redirect to map page
+                window.location.href = 'map.html';
+            },
+            error: function(error) {
+                alert("Login failed! Please check your credentials.");
+            }
+        });
+    }
+</script>
+
+</body>
+</html>

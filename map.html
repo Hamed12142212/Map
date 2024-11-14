@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <title>Ramallah Waste Containers</title>
+        <link rel="stylesheet" href="https://unpkg.com/leaflet@1.6.0/dist/leaflet.css" />
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/Turf.js/6.5.0/turf.min.js"></script> <!-- Include Turf.js -->
+        <style>
+          body {
+            margin: 0px;
+            height: 100%;
+            width: 100%;
+          }
+      
+          #map {
+            position: absolute;
+            width: 100%;
+            top: 0px;
+            bottom: 0;
+          }
+      
+          .leaflet-top.leaflet-right {
+            margin-top: 10px;
+            margin-right: 10px;
+          }
+          .logout-btn,
+          .clear-btn,
+          .stats-btn,
+          .select-by-material-btn,
+          .download-btn,
+          .buffer-btn,
+          .select-within-buffer-btn,
+          .remove-buffers-btn {
+            background: white;
+            padding: 6px;
+            font-size: 14px;
+            cursor: pointer;
+            border: 2px solid #ddd;
+            border-radius: 4px;
+            box-shadow: 0px 1px 4px rgba(0, 0, 0, 0.3);
+            margin: 4px;
+            display: block;
+          }
+      
+          .selection-rectangle {
+            border: 2px dashed blue;
+            background: rgba(0, 0, 255, 0.2);
+            position: absolute;
+            pointer-events: none;
+          }
+        </style>
+      </head>
+<body>
+
+<script src="logout.js"></script>
+<!-- Map (hidden until login is successful) -->
+<div id="map"></div>
+
+<script src="https://unpkg.com/leaflet@1.6.0/dist/leaflet.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+
+<script>
+    // Check if the user is logged in by verifying the JWT token from sessionStorage
+    $(document).ready(function() {
+        const token = sessionStorage.getItem('access_token_cookie');
+        
+        if (!token) {
+            // Redirect to login page if no token is found
+            window.location.href = 'login.html';
+        } else {
+            initializeMap(token);  // Initialize the map with token
+        }
+    });
+
+// Initialize the map with token (no need to manually add token header)
+function initializeMap() {
+    const mapOptions = {
+      zoomSnap: 0.5,
+      center: [31.9045, 35.2045],
+      zoom: 17.5
+    };
+
+    const map = L.map("map", mapOptions);
+
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+      subdomains: 'abcd',
+      maxZoom: 20
+    }).addTo(map);
+
+    let zonesLayer, wasteContainersLayer;
+    let selectedFeatures = [];
+    let drawnRectangle;
+    let isDrawing = false;
+    let ctrlPressed = false;
+    let startLatLng;
+    let bufferLayers = L.featureGroup().addTo(map); // Group to hold buffer layers
+
+    function highlightFeature(layer) {
+      if (!selectedFeatures.includes(layer)) {
+        layer.setStyle({
+          fillColor: "blue",
+          color: "blue",
+          weight: 2,
+          opacity: 1,
+          fillOpacity: 0.8
+        });
+        selectedFeatures.push(layer);
+      }
+    }
+
+    function resetStyle(layer) {
+      if (zonesLayer && zonesLayer.hasLayer(layer)) {
+        layer.setStyle({
+          fillColor: "yellow",
+          color: "yellow",
+          weight: 1.0,
+          opacity: 0.7,
+          fillOpacity: 0.3
+        });
+      } else if (wasteContainersLayer && wasteContainersLayer.hasLayer(layer)) {
+        layer.setStyle({
+          fillColor: "orange",
+          color: "orange",
+          weight: 1,
+          opacity: 1,
+          fillOpacity: 0.8
+        });
+      }
+    }
+
+
+
+
+    L.Control.LogoutControl = L.Control.extend({
+    onAdd: function () {
+        const button = L.DomUtil.create("div", "logout-btn");
+        button.innerHTML = "Logout";
+        button.onclick = function () {
+            logout(); // Call the logout function (you can define it in your `logout.js`)
+        };
+        return button;
+    }
+});
+
+    // Clear Selection Button
+    L.Control.ClearControl = L.Control.extend({
+      onAdd: function () {
+        const button = L.DomUtil.create("div", "clear-btn");
+        button.innerHTML = "Clear Selection";
+        button.onclick = function () {
+          selectedFeatures.forEach(resetStyle);
+          selectedFeatures = [];
+          map.closePopup();
+          if (drawnRectangle) {
+            map.removeLayer(drawnRectangle);
+            drawnRectangle = null;
+          }
+        };
+        return button;
+      }
+    });
+
+    // Statistics Button
+    L.Control.StatsControl = L.Control.extend({
+      onAdd: function () {
+        const button = L.DomUtil.create("div", "stats-btn");
+        button.innerHTML = "Show Statistics";
+        button.onclick = function () {
+          if (selectedFeatures.length > 0) {
+            const zoneCount = selectedFeatures.filter(layer => zonesLayer.hasLayer(layer)).length;
+            const wasteContainerCount = selectedFeatures.filter(layer => wasteContainersLayer.hasLayer(layer)).length;
+            alert(`Statistics:\n- Zones Selected: ${zoneCount}\n- Waste Containers Selected: ${wasteContainerCount}`);
+          } else { alert("No features selected!");;
+          }
+        };
+        return button;
+      }
+    });
+
+    // Select Waste Containers by Material Button
+    L.Control.SelectByMaterialControl = L.Control.extend({
+      onAdd: function () {
+        const button = L.DomUtil.create("div", "select-by-material-btn");
+        button.innerHTML = "Select by Material";
+        button.onclick = function () {
+          const material = prompt("Enter the material type to select:");
+          if (material) {
+            wasteContainersLayer.eachLayer(function (layer) {
+              if (layer.feature && layer.feature.properties.TYPE_OF_WA === material) {
+                highlightFeature(layer);
+              }
+            });
+          }
+        };
+        return button;
+      }
+    });
+
+    // Download Selected Features Button
+    L.Control.DownloadControl = L.Control.extend({
+      onAdd: function () {
+        const button = L.DomUtil.create("div", "download-btn");
+        button.innerHTML = "Download Selected Features";
+        button.onclick = function () {
+          if (selectedFeatures.length > 0) {
+            const geojson = {
+              type: "FeatureCollection",
+              features: selectedFeatures.map(layer => layer.toGeoJSON())
+            };
+            const blob = new Blob([JSON.stringify(geojson)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'selected_features.geojson';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+          } else {
+            alert("No features selected to download!");
+          }
+        };
+        return button;
+      }
+    });
+
+    // Buffer Zone Button
+    L.Control.BufferControl = L.Control.extend({
+      onAdd: function () {
+        const button = L.DomUtil.create("div", "buffer-btn");
+        button.innerHTML = "Create Buffer Zone";
+        button.onclick = function () {
+          const bufferDistance = parseFloat(prompt("Enter the buffer distance in meters:"));
+          if (!isNaN(bufferDistance) && selectedFeatures.length > 0) {
+            selectedFeatures.forEach(layer => {
+              const latlngs = layer.getLatLng ? [layer.getLatLng()] : layer.getBounds().getLatLngs();
+              const buffer = L.circle(latlngs[0], { radius: bufferDistance, color: 'blue', weight: 2 }).addTo(bufferLayers);
+            });
+          } else {
+            alert("Please select features and enter a valid distance.");
+          }
+        };
+        return button;
+      }
+    });
+
+    // Remove All Buffers Button
+    L.Control.RemoveBuffersControl = L.Control.extend({
+      onAdd: function () {
+        const button = L.DomUtil.create("div", "remove-buffers-btn");
+        button.innerHTML = "Remove All Buffers";
+        button.onclick = function () {
+          bufferLayers.clearLayers(); // Remove all buffer layers
+        };
+        return button;
+      }
+    });
+
+// Select Features Within Buffer Button
+L.Control.SelectWithinBufferControl = L.Control.extend({
+  onAdd: function () {
+    const button = L.DomUtil.create("div", "select-within-buffer-btn");
+    button.innerHTML = "Select Features Within Buffer";
+    button.onclick = function () {
+      if (bufferLayers.getLayers().length > 0) { // Check if there are any buffer layers
+        const selectedInBuffer = [];
+
+        // Loop through each buffer layer
+        bufferLayers.eachLayer(function (buffer) {
+          const bufferLatLng = buffer.getLatLng();
+          const bufferRadius = buffer.getRadius();
+          
+          // Create a GeoJSON polygon for the buffer using Turf.js
+          const bufferGeo = turf.circle([bufferLatLng.lng, bufferLatLng.lat], bufferRadius, {
+            units: 'meters'
+          });
+
+          // Check zones
+          zonesLayer.eachLayer(function (zone) {
+            const zoneGeo = zone.toGeoJSON();
+            // Check if the entire zone is within the buffer using Turf.js
+            if (turf.booleanContains(bufferGeo, zoneGeo)) {
+              highlightFeature(zone);
+              selectedInBuffer.push(zone);
+            }
+          });
+
+          // Check waste containers
+          wasteContainersLayer.eachLayer(function (container) {
+            const containerGeo = container.toGeoJSON();
+            // Check if the container is within the buffer using Turf.js
+            if (turf.booleanContains(bufferGeo, containerGeo)) {
+              highlightFeature(container);
+              selectedInBuffer.push(container);
+            }
+          });
+        });
+
+        if (selectedInBuffer.length === 0) {
+          alert("No features found within the buffer!");
+        }
+      } else {
+        alert("Please create a buffer zone first!");
+      }
+    };
+    return button;
+  }
+});
+
+// Add the new SelectWithinBuffer control to the map
+L.control.selectWithinBufferControl = function (opts) {
+  return new L.Control.SelectWithinBufferControl(opts);
+};
+
+
+
+L.control.logoutControl = function (opts) {
+    return new L.Control.LogoutControl(opts);
+};
+
+    
+
+    L.control.clearControl = function (opts) {
+      return new L.Control.ClearControl(opts);
+    };
+
+    L.control.statsControl = function (opts) {
+      return new L.Control.StatsControl(opts);
+    };
+
+    L.control.selectByMaterialControl = function (opts) {
+      return new L.Control.SelectByMaterialControl(opts);
+    };
+
+    L.control.downloadControl = function (opts) {
+      return new L.Control.DownloadControl(opts);
+    };
+
+    L.control.bufferControl = function (opts) {
+      return new L.Control.BufferControl(opts);
+    };
+
+    L.control.selectWithinBufferControl = function (opts) {
+      return new L.Control.SelectWithinBufferControl(opts);
+    };
+
+    L.control.removeBuffersControl = function (opts) {
+      return new L.Control.RemoveBuffersControl(opts);
+    };
+
+    let layersLoaded = 0;
+
+function checkLayersLoaded() {
+    layersLoaded++;
+    if (layersLoaded === 2) { // Change the number based on how many layers you have
+        initializeControls();
+    }
+}
+
+// Logout Function Definition
+function logout() {
+    // Remove 'access_token_cookie' from sessionStorage and localStorage
+    sessionStorage.removeItem('access_token_cookie');
+    localStorage.removeItem('access_token_cookie');
+    
+    // Redirect to the login page (login.html)
+    window.location.href = 'login.html';  // Ensure the URL matches the location of your login page
+    
+    // Optionally, you can display an alert or message to the user
+    alert('You have been logged out.');
+}
+
+
+// Function to initialize controls
+function initializeControls() {
+    
+    L.control.logoutControl({ position: "bottomleft" }).addTo(map);
+    L.control.clearControl({ position: "topright" }).addTo(map);
+    L.control.statsControl({ position: "topright" }).addTo(map);
+    L.control.selectByMaterialControl({ position: "topright" }).addTo(map);
+    L.control.downloadControl({ position: "topright" }).addTo(map);
+    L.control.bufferControl({ position: "topright" }).addTo(map);
+    L.control.selectWithinBufferControl({ position: "topright" }).addTo(map);
+    L.control.removeBuffersControl({ position: "topright" }).addTo(map); // Add the new button
+}
+
+
+// Load Zones GeoJSON
+$.getJSON("RamallahZones.json", function (RZ) {
+    zonesLayer = L.geoJson(RZ, {
+        style: function (feature) {
+            return {
+                fillColor: "yellow",
+                color: "yellow",
+                weight: 1.0,
+                opacity: 0.7,
+                fillOpacity: 0.3
+            };
+        },
+        onEachFeature: function (feature, layer) {
+            layer.on('click', function (e) {
+                highlightFeature(layer);
+                layer.bindPopup("Zone: " + feature.properties.NAME_ENGLI + "<br>MAIL_CODE: " + feature.properties.MAIL_CODE).openPopup();
+            });
+        }
+    }).addTo(map);
+    checkLayersLoaded(); // Call here after zonesLayer is added
+});
+
+// Load Waste Containers GeoJSON
+$.getJSON("wasteContainer.json", function (WC) {
+    wasteContainersLayer = L.geoJson(WC, {
+        pointToLayer: function (feature, latlng) {
+            return L.circleMarker(latlng, {
+                radius: 8,
+                fillColor: "orange",
+                color: "orange",
+                weight: 1,
+                opacity: 1,
+                fillOpacity: 0.8
+            });
+        },
+        onEachFeature: function (feature, layer) {
+            layer.on('click', function (e) {
+                highlightFeature(layer);
+                layer.bindPopup("Container Type: " + feature.properties.TYPE_OF_WA).openPopup();
+            });
+        }
+    }).addTo(map);
+    checkLayersLoaded(); // Call here after wasteContainersLayer is added
+});
+
+    // Rectangle selection functionality
+    map.on('mousedown', function (e) {
+      if (ctrlPressed) {
+        startLatLng = e.latlng;
+        isDrawing = true;
+        drawnRectangle = L.rectangle([startLatLng, startLatLng], { color: "blue", weight: 1 }).addTo(map);
+        L.DomEvent.disableClickPropagation(drawnRectangle._path);
+      }
+    });
+
+    map.on('mousemove', function (e) {
+      if (isDrawing) {
+        const bounds = L.latLngBounds(startLatLng, e.latlng);
+        drawnRectangle.setBounds(bounds);
+      }
+    });
+
+    map.on('mouseup', function (e) {
+      if (isDrawing) {
+        isDrawing = false;
+        const bounds = drawnRectangle.getBounds();
+
+        // Select features fully within the drawn area
+        zonesLayer.eachLayer(function (layer) {
+          if (bounds.contains(layer.getBounds().getNorthWest()) &&
+              bounds.contains(layer.getBounds().getNorthEast()) &&
+              bounds.contains(layer.getBounds().getSouthWest()) &&
+              bounds.contains(layer.getBounds().getSouthEast())) {
+            highlightFeature(layer);
+          }
+        });
+
+        wasteContainersLayer.eachLayer(function (layer) {
+          if (bounds.contains(layer.getLatLng())) {
+            highlightFeature(layer);
+          }
+        });
+
+        // Remove the rectangle after selection
+        map.removeLayer(drawnRectangle);
+        drawnRectangle = null;
+      }
+    });
+
+    $(document).keydown(function (e) {
+      if (e.ctrlKey) {
+        ctrlPressed = true;
+        map.dragging.disable(); // Disable dragging when Ctrl is pressed
+      }
+    });
+
+    $(document).keyup(function (e) {
+      if (e.key === "Control") {
+        ctrlPressed = false;
+        map.dragging.enable(); // Enable dragging when Ctrl is released
+      }
+    });
+
+    $.ajax({
+    url: "http://127.0.0.1:5000/protected",
+    method: "POST",  // Change the method to POST
+    xhrFields: {
+        withCredentials: true  // Send cookies with the request
+    },
+    success: function(response) {
+        alert(response.msg);  // Show success message
+    },
+    error: function(error) {
+        console.error('Error fetching protected data', error);
+    }
+});
+
+}
+
+
+</script>
+
+
+
+</body>
+</html>
