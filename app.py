@@ -98,6 +98,14 @@ def check_user(username):
     else:
         return jsonify(msg="User not found"), 404
 
+@app.route("/check_db")
+def check_db():
+    try:
+        user = User.query.first()  # Try querying something from the DB
+        return jsonify(msg=f"First user: {user.username if user else 'No users'}")
+    except Exception as e:
+        return jsonify(msg=f"Error accessing database: {str(e)}")
+
 
 if __name__ == "__main__":
     app.run(debug=True, host='0.0.0.0', port=int(os.getenv('PORT', 5000)))
