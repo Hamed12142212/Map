@@ -10,9 +10,11 @@ app = Flask(__name__)
 CORS(app, origins="*", supports_credentials=True)
 
 # Configurations
-app.config["JWT_SECRET_KEY"] = "your_jwt_secret_key"  # Secret key for JWT
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///users.db'  # SQLite database for simplicity
+
+app.config["JWT_SECRET_KEY"] = os.getenv("JWT_SECRET_KEY", "default_secret_key")  # Secret key for JWT
+app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('postgresql://usersdata_fyx5_user:n3z4c1YAQ3SLVuj7raLsKYgQXZZ2eT5p@dpg-csr93maj1k6c7394uh1g-a/usersdata_fyx5',)  # PostgreSQL database URI (set in Render dashboard)
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False  # Disable modification tracking
+
 
 jwt = JWTManager(app)
 db = SQLAlchemy(app)  # Initialize the database
