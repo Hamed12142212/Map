@@ -11,7 +11,11 @@ CORS(app, origins="https://map-6aha.onrender.com/", supports_credentials=True)
 
 # Configurations
 app.config["JWT_SECRET_KEY"] = "your_jwt_secret_key"  # Secret key for JWT
-app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://usersdata_fyx5_user:n3z4c1YAQ3SLVuj7raLsKYgQXZZ2eT5p@dpg-csr93maj1k6c7394uh1g-a.frankfurt-postgres.render.com/usersdata_fyx5'
+app.config['SQLALCHEMY_DATABASE_URI'] = (
+    "postgresql://usersdata_fyx5_user:n3z4c1YAQ3SLVuj7raLsKYgQXZZ2eT5p"
+    "@dpg-csr93maj1k6c7394uh1g-a.frankfurt-postgres.render.com/usersdata_fyx5?sslmode=require"
+)
+
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False  # Disable modification tracking
 
 jwt = JWTManager(app)
@@ -81,6 +85,15 @@ def logout():
     response = make_response(jsonify(msg="Logged out successfully"))
     response.delete_cookie("access_token_cookie")
     return response
+
+@app.route("/test-db")
+def test_db():
+    try:
+        user_count = User.query.count()
+        return jsonify({"message": f"Connection successful! User count: {user_count}"})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 
 if __name__ == "__main__":
     app.run(debug=True, host='0.0.0.0', port=int(os.getenv('PORT', 5000)))
