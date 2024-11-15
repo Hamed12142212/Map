@@ -106,6 +106,15 @@ def check_db():
     except Exception as e:
         return jsonify(msg=f"Error accessing database: {str(e)}")
 
+import os
+@app.route("/check_file")
+def check_file():
+    if os.path.exists("users.db"):
+        return jsonify(msg="Database file found")
+    else:
+        return jsonify(msg="Database file not found")
+
+
 
 if __name__ == "__main__":
     app.run(debug=True, host='0.0.0.0', port=int(os.getenv('PORT', 5000)))
