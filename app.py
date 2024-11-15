@@ -7,16 +7,12 @@ import os
 app = Flask(__name__)
 
 # Enable CORS for the frontend and allow credentials (cookies)
-CORS(app, origins="*", supports_credentials=True)
+CORS(app, origins="https://map-6aha.onrender.com/", supports_credentials=True)
 
 # Configurations
-
-file_path = os.path.join(os.getcwd(),'users.db')
-
-app.config["JWT_SECRET_KEY"] = os.getenv("JWT_SECRET_KEY", "default_secret_key")  # Secret key for JWT
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///users.db'
+app.config["JWT_SECRET_KEY"] = "your_jwt_secret_key"  # Secret key for JWT
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///users.db'  # SQLite database for simplicity
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False  # Disable modification tracking
-
 
 jwt = JWTManager(app)
 db = SQLAlchemy(app)  # Initialize the database
@@ -29,10 +25,6 @@ class User(db.Model):
 
     def __repr__(self):
         return f"<User {self.username}>"
-
-# Create the database tables (if they don't exist)
-with app.app_context():
-    db.create_all()
 
 
 
@@ -89,46 +81,6 @@ def logout():
     response = make_response(jsonify(msg="Logged out successfully"))
     response.delete_cookie("access_token_cookie")
     return response
-
-@app.route("/check_user/<username>", methods=["GET"])
-def check_user(username):
-    # Query the user from the database
-    user = User.query.filter_by(username=username).first()
-    
-    if user:
-        return jsonify(username=user.username, password=user.password)
-    else:
-        return jsonify(msg="User not found"), 404
-
-@app.route("/check_db")
-def check_db():
-    try:
-        user = User.query.first()  # Try querying something from the DB
-        return jsonify(msg=f"First user: {user.username if user else 'No users'}")
-    except Exception as e:
-        return jsonify(msg=f"Error accessing database: {str(e)}")
-
-
-@app.route("/check_file")
-def check_file():
-    if os.path.exists("users.db"):
-        return jsonify(msg="Database file found")
-    else:
-        return jsonify(msg="Database file not found")
-        
-@app.route("/add_user", methods=["POST"])
-def add_user():
-    # Add a test user to the database
-    username = request.json.get("username", "test")
-    password = request.json.get("password", "test")
-    
-    new_user = User(username=username, password=password)
-    db.session.add(new_user)
-    db.session.commit()
-    
-    return jsonify(msg=f"User {username} added successfully")
-
-
 
 if __name__ == "__main__":
     app.run(debug=True, host='0.0.0.0', port=int(os.getenv('PORT', 5000)))
