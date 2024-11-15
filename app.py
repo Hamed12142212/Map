@@ -45,7 +45,7 @@ def login():
         password = data.get("password")
         
         # Query the user from the database
-         user = User.query.filter_by(username=username.lower()).first()
+        user = User.query.filter_by(username=username.lower()).first()
         
         if user and user.password == password:
             # Generate the JWT token
