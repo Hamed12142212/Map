@@ -34,7 +34,7 @@
             border-radius: 10px;
             box-shadow: 0px 4px 15px rgba(0, 0, 0, 0.1);
             background-color: rgba(255, 255, 255, 0.9); /* Semi-transparent white */
-            width: 350px;
+            width: 500px;
             text-align: center;
         }
 
@@ -52,10 +52,11 @@
             padding: 12px;
             margin: 10px 0;
             border: 1px solid #ddd;
-            border-radius: 4px;
+            border-radius: 10px; /* Matching border radius */
             font-size: 16px;
             color: #333;
             background-color: #f9f9f9;
+            box-sizing: border-box; /* Ensures padding is included in the width */
         }
 
         .login-box input:focus {
@@ -67,13 +68,15 @@
         .login-box button {
             width: 100%;
             padding: 12px;
+            margin: 0; /* Ensure no margin */
             background-color: #FF7E5F; /* Primary button color */
             color: white;
             border: none;
-            border-radius: 5px;
+            border-radius: 10px; /* Matching border radius */
             cursor: pointer;
             font-size: 16px;
             font-weight: bold;
+            box-sizing: border-box; /* Ensures padding is included in the width */
         }
 
         .login-box button:hover {
@@ -84,9 +87,78 @@
             background-color: #FF7E5F; /* Active state button color */
             transform: scale(0.98); /* Slight button shrink on click */
         }
+
+        /* Fade-out animation for the login box */
+        @keyframes fadeOut {
+            from {
+                opacity: 1;
+            }
+            to {
+                opacity: 0;
+                transform: scale(0.95);
+            }
+        }
+
+        /* Bounce effect for the login button */
+        @keyframes bounce {
+            0%, 100% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.1);
+            }
+        }
+
+        /* Apply fade-out and bounce classes */
+        .fade-out {
+            animation: fadeOut 0.5s forwards;
+        }
+
+        .bounce {
+            animation: bounce 0.3s;
+        }
+
+        /* Success icon styling */
+        #success-icon {
+            font-size: 50px;
+            color: #28a745; /* Success green */
+            position: absolute;
+            top: 50%; /* Center icon vertically */
+            left: 50%; /* Center icon horizontally */
+            transform: translate(-50%, -50%); /* Center icon */
+            opacity: 0; /* Hidden initially */
+        }
+
+        /* Circle motion animation for success icon */
+        @keyframes circularMotion {
+            0% {
+                opacity: 0;
+                transform: translate(-50%, -50%) scale(5) rotate(0deg);
+            }
+            50% {
+                opacity: 1;
+                transform: translate(-50%, -50%) scale(5) rotate(180deg);
+            }
+            100% {
+                opacity: 1;
+                transform: translate(-50%, -50%) scale(5) rotate(360deg);
+            }
+        }
+
+        /* Success class to trigger animation */
+        .success.visible {
+            animation: circularMotion 1s ease-in-out forwards;
+        }
+
     </style>
 </head>
 <body>
+
+    <!-- Add this success icon outside the login-container for positioning -->
+<div id="success-icon" class="success hidden">
+    ✓ <!-- Success checkmark symbol -->
+</div>
+
 
 <!-- Login page (initially visible) -->
 <div class="login-container">
@@ -101,33 +173,49 @@
 <script>
     // Handle login process
     function login() {
-        const username = $('#username').val();
-        const password = $('#password').val();
+    const username = $('#username').val();
+    const password = $('#password').val();
 
-        // Perform AJAX login request
+    // Trigger animations
+    $('.login-box').addClass('fade-out');
+    $('button').addClass('bounce');
+
+    // Delay the AJAX request to allow the animations to finish
+    setTimeout(() => {
         $.ajax({
-            url: "https://map-6aha.onrender.com/",  // Backend URL
-            method: "POST",  // POST request
-            contentType: "application/json",  // Sending JSON data
+            url: "https://map-6aha.onrender.com/",
+            method: "POST",
+            contentType: "application/json",
             data: JSON.stringify({
-                username: username,  // Get the username from the form
-                password: password   // Get the password from the form
+                username: username,
+                password: password
             }),
             success: function(response) {
                 console.log("Login successful, redirecting to map...");
                 
-
-                // Save the JWT token to sessionStorage
+                // Save JWT token to sessionStorage
                 sessionStorage.setItem('access_token_cookie', response.access_token);
 
-                // Redirect to map page
-                window.location.href = 'map.html';
+                // Trigger success icon animation
+                $('#success-icon').removeClass('hidden').addClass('visible');
+
+                // Delay redirection to show success animation
+                setTimeout(() => {
+                    window.location.href = 'map.html';
+                }, 1000); // 1s delay for the animation
             },
             error: function(error) {
                 alert("Login failed! Please check your credentials.");
+
+                // Remove animations if login fails
+                $('.login-box').removeClass('fade-out');
+                $('button').removeClass('bounce');
             }
         });
-    }
+    }, 500);
+}
+
+
 </script>
 
 </body>
