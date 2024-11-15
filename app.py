@@ -7,7 +7,8 @@ import os
 app = Flask(__name__)
 
 # Enable CORS for the frontend and allow credentials (cookies)
-CORS(app, origins="https://map-6aha.onrender.com/", supports_credentials=True)
+CORS(app, origins=["https://map-6aha.onrender.com", "https://hamed12142212.github.io"], supports_credentials=True)
+
 
 # Configurations
 app.config["JWT_SECRET_KEY"] = "your_jwt_secret_key"  # Secret key for JWT
