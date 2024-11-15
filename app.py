@@ -34,6 +34,8 @@ class User(db.Model):
 with app.app_context():
     db.create_all()
 
+
+
 # Route for login (accepts both GET and POST)
 @app.route("/", methods=['GET', 'POST'])
 def login():
@@ -106,13 +108,25 @@ def check_db():
     except Exception as e:
         return jsonify(msg=f"Error accessing database: {str(e)}")
 
-import os
+
 @app.route("/check_file")
 def check_file():
     if os.path.exists("users.db"):
         return jsonify(msg="Database file found")
     else:
         return jsonify(msg="Database file not found")
+        
+@app.route("/add_user", methods=["POST"])
+def add_user():
+    # Add a test user to the database
+    username = request.json.get("username", "test")
+    password = request.json.get("password", "test")
+    
+    new_user = User(username=username, password=password)
+    db.session.add(new_user)
+    db.session.commit()
+    
+    return jsonify(msg=f"User {username} added successfully")
 
 
 
