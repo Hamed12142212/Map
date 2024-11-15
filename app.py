@@ -23,12 +23,14 @@ db = SQLAlchemy(app)  # Initialize the database
 
 # Create the User model
 class User(db.Model):
+    __tablename__ = 'users'  # Explicitly setting the table name to 'users'
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(100), unique=True, nullable=False)
     password = db.Column(db.String(100), nullable=False)
 
     def __repr__(self):
         return f"<User {self.username}>"
+
 
 
 
@@ -89,10 +91,11 @@ def logout():
 @app.route("/test-db")
 def test_db():
     try:
-        user_count = User.query.count()
+        user_count = User.query.count()  # This counts users in the 'users' table
         return jsonify({"message": f"Connection successful! User count: {user_count}"})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
 
 
 if __name__ == "__main__":
