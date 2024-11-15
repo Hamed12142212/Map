@@ -11,8 +11,10 @@ CORS(app, origins="*", supports_credentials=True)
 
 # Configurations
 
+file_path = os.path.join(os.getcwd(),'users.db')
+
 app.config["JWT_SECRET_KEY"] = os.getenv("JWT_SECRET_KEY", "default_secret_key")  # Secret key for JWT
-app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('postgresql://usersdata_fyx5_user:n3z4c1YAQ3SLVuj7raLsKYgQXZZ2eT5p@dpg-csr93maj1k6c7394uh1g-a/usersdata_fyx5',)  # PostgreSQL database URI (set in Render dashboard)
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///users.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False  # Disable modification tracking
 
 
