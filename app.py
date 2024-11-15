@@ -84,5 +84,16 @@ def logout():
     response.delete_cookie("access_token_cookie")
     return response
 
+@app.route("/check_user/<username>", methods=["GET"])
+def check_user(username):
+    # Query the user from the database
+    user = User.query.filter_by(username=username).first()
+    
+    if user:
+        return jsonify(username=user.username, password=user.password)
+    else:
+        return jsonify(msg="User not found"), 404
+
+
 if __name__ == "__main__":
     app.run(debug=True, host='0.0.0.0', port=int(os.getenv('PORT', 5000)))
