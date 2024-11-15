@@ -11,7 +11,7 @@ CORS(app, origins="https://map-6aha.onrender.com/", supports_credentials=True)
 
 # Configurations
 app.config["JWT_SECRET_KEY"] = "your_jwt_secret_key"  # Secret key for JWT
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///users.db'  # SQLite database for simplicity
+app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://usersdata_fyx5_user:n3z4c1YAQ3SLVuj7raLsKYgQXZZ2eT5p@dpg-csr93maj1k6c7394uh1g-a.frankfurt-postgres.render.com/usersdata_fyx5'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False  # Disable modification tracking
 
 jwt = JWTManager(app)
