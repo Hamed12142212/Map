@@ -154,6 +154,12 @@
 </head>
 <body>
 
+    <script>
+    // Remove the access token from sessionStorage when the page loads
+    sessionStorage.removeItem('access_token_cookie');
+</script>
+
+
     <!-- Add this success icon outside the login-container for positioning -->
 <div id="success-icon" class="success hidden">
     ✓ <!-- Success checkmark symbol -->
