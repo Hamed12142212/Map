@@ -40,7 +40,8 @@ def register():
     password = data.get("password")
 
     # Hash the password
-    hashed_password = generate_password_hash(password, method='sha256')
+    hashed_password = generate_password_hash(password, method='pbkdf2:sha256')
+
 
     # Add the new user to the database
     new_user = User(username=username.lower(), password=hashed_password)
